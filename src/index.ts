@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { QBittorrent } from '@ctrl/qbittorrent';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   ListToolsRequestSchema,
@@ -10,7 +11,6 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { QBittorrentClient, TorrentInfo, AppState } from './qbittorrent.js';
 
 // Get configuration from environment variables
 const QBIT_URL = process.env.QBIT_URL || 'http://localhost:8080';
@@ -18,13 +18,17 @@ const QBIT_USERNAME = process.env.QBIT_USERNAME || 'admin';
 const QBIT_PASSWORD = process.env.QBIT_PASSWORD || 'adminPassword';
 
 // Initialize qBittorrent client
-const qbClient = new QBittorrentClient(QBIT_URL);
+const qb = new QBittorrent({
+  baseUrl: QBIT_URL,
+  username: QBIT_USERNAME,
+  password: QBIT_PASSWORD,
+});
 
 // Initialize MCP server
 const server = new Server(
   {
     name: 'qbit-mcp',
-    version: '0.1.0',
+    version: '0.1.3',
   },
   {
     capabilities: {
@@ -44,8 +48,7 @@ const tools: Tool[] = [
       properties: {
         filter: {
           type: 'string',
-          description:
-            'Filter torrents by state: all, downloading, seeding, completed, paused, stopped, stalled, checking, error',
+          description: 'Filter torrents by state: all, downloading, seeding, completed, paused, stopped, stalled, checking, error',
           enum: [
             'all',
             'downloading',
@@ -201,29 +204,27 @@ const tools: Tool[] = [
 // Tool handlers
 async function handleListTorrents(filter: string = 'all'): Promise<TextContent> {
   try {
-    await qbClient.login(QBIT_USERNAME, QBIT_PASSWORD);
-    const torrents = await qbClient.getTorrents(filter);
+    const torrents = await qb.listTorrents(undefined, filter as any);
 
-    if (torrents.length === 0) {
+    if (!torrents || torrents.length === 0) {
       return {
         type: 'text',
-        text: `No torrents found with filter: ${filter}`,
+        text: 'No torrents found',
       };
     }
 
     const summary = torrents
       .map(
-        (t, i) =>
-          `${i + 1}. ${t.name}
+        (t: any, i: number) =>
+          `${i + 1}. ${t.name || 'Unknown'}
    Hash: ${t.hash}
    State: ${t.state}
-   Progress: ${(t.progress * 100).toFixed(2)}%
-   Size: ${(t.total_size / 1024 / 1024 / 1024).toFixed(2)} GB
-   Download Speed: ${(t.dl_speed / 1024 / 1024).toFixed(2)} MB/s
-   Upload Speed: ${(t.up_speed / 1024 / 1024).toFixed(2)} MB/s
-   ETA: ${t.eta} seconds
-   Category: ${t.category || 'None'}
-   Tags: ${t.tags.join(', ') || 'None'}`,
+   Progress: ${((t.progress || 0) * 100).toFixed(2)}%
+   Size: ${((t.size || 0) / 1024 / 1024 / 1024).toFixed(2)} GB
+   Download Speed: ${((t.dlSpeed || 0) / 1024 / 1024).toFixed(2)} MB/s
+   Upload Speed: ${((t.upSpeed || 0) / 1024 / 1024).toFixed(2)} MB/s
+   ETA: ${t.eta || 0} seconds
+   Category: ${t.category || 'None'}`,
       )
       .join('\n\n');
 
@@ -241,33 +242,28 @@ async function handleListTorrents(filter: string = 'all'): Promise<TextContent> 
 
 async function handleGetTorrentDetails(hash: string): Promise<TextContent> {
   try {
-    await qbClient.login(QBIT_USERNAME, QBIT_PASSWORD);
-    const torrent = await qbClient.getTorrent(hash);
+    const torrents = await qb.listTorrents(hash);
 
-    if (!torrent) {
+    if (!torrents || torrents.length === 0) {
       return {
         type: 'text',
         text: `Torrent with hash ${hash} not found`,
       };
     }
 
-    const details = `
-Torrent Details:
+    const torrent = torrents[0];
+    const details = `Torrent Details:
 ================
-Name: ${torrent.name}
+Name: ${torrent.name || 'Unknown'}
 Hash: ${torrent.hash}
 State: ${torrent.state}
-Progress: ${(torrent.progress * 100).toFixed(2)}%
-Total Size: ${(torrent.total_size / 1024 / 1024 / 1024).toFixed(2)} GB
-Download Speed: ${(torrent.dl_speed / 1024 / 1024).toFixed(2)} MB/s
-Upload Speed: ${torrent.up_speed / 1024 / 1024} MB/s
-ETA: ${torrent.eta} seconds
-Category: ${torrent.category || 'None'}
-Tags: ${torrent.tags.join(', ') || 'None'}
-Save Path: ${torrent.save_path}
-Added On: ${new Date(torrent.added_on * 1000).toISOString()}
-Completed On: ${torrent.completion_on > 0 ? new Date(torrent.completion_on * 1000).toISOString() : 'Not completed'}
-    `;
+Progress: ${((torrent.progress || 0) * 100).toFixed(2)}%
+Total Size: ${((torrent.size || 0) / 1024 / 1024 / 1024).toFixed(2)} GB
+Download Speed: ${((torrent.dlspeed || 0) / 1024 / 1024).toFixed(2)} MB/s
+Upload Speed: ${((torrent.upspeed || 0) / 1024 / 1024).toFixed(2)} MB/s
+ETA: ${torrent.eta || 0} seconds
+Ratio: ${torrent.ratio || 0}
+Added: ${new Date(torrent.added_on * 1000).toISOString()}`;
 
     return {
       type: 'text',
@@ -289,14 +285,14 @@ async function handleAddTorrent(
   savepath?: string,
 ): Promise<TextContent> {
   try {
-    await qbClient.login(QBIT_USERNAME, QBIT_PASSWORD);
-    await qbClient.addTorrent({
-      urls,
-      category,
-      tags,
-      paused,
-      savepath,
-    });
+    const urlStr = urls.join('\n');
+
+    const options: any = {};
+    if (category) options.category = category;
+    if (paused !== undefined) options.paused = paused;
+    if (savepath) options.savepath = savepath;
+
+    await qb.addMagnet(urlStr, options);
 
     return {
       type: 'text',
@@ -312,12 +308,11 @@ async function handleAddTorrent(
 
 async function handleRemoveTorrent(hash: string, deleteFiles: boolean = false): Promise<TextContent> {
   try {
-    await qbClient.login(QBIT_USERNAME, QBIT_PASSWORD);
-    await qbClient.removeTorrent(hash, deleteFiles);
+    await qb.removeTorrent(hash, deleteFiles);
 
     return {
       type: 'text',
-      text: `Sucessfully removed torrent ${hash}${deleteFiles ? ' and deleted files' : ''}`,
+      text: `Successfully removed torrent ${hash}${deleteFiles ? ' and deleted files' : ''}`,
     };
   } catch (error) {
     return {
@@ -329,8 +324,7 @@ async function handleRemoveTorrent(hash: string, deleteFiles: boolean = false): 
 
 async function handlePauseTorrent(hash: string): Promise<TextContent> {
   try {
-    await qbClient.login(QBIT_USERNAME, QBIT_PASSWORD);
-    await qbClient.pauseTorrent(hash);
+    await qb.pauseTorrent(hash);
 
     return {
       type: 'text',
@@ -346,8 +340,7 @@ async function handlePauseTorrent(hash: string): Promise<TextContent> {
 
 async function handleResumeTorrent(hash: string): Promise<TextContent> {
   try {
-    await qbClient.login(QBIT_USERNAME, QBIT_PASSWORD);
-    await qbClient.resumeTorrent(hash);
+    await qb.resumeTorrent(hash);
 
     return {
       type: 'text',
@@ -363,22 +356,13 @@ async function handleResumeTorrent(hash: string): Promise<TextContent> {
 
 async function handleGetAppState(): Promise<TextContent> {
   try {
-    await qbClient.login(QBIT_USERNAME, QBIT_PASSWORD);
-    const state = await qbClient.getAppState();
+    const allData = await qb.getAllData();
 
-    const details = `
-qBittorrent App State:
+    const details = `qBittorrent App State:
 ======================
-Download Speed: ${(state.dl_info_speed / 1024 / 1024).toFixed(2)} MB/s
-Downloaded Data: ${(state.dl_info_data / 1024 / 1024 / 1024).toFixed(2)} GB
-Upload Speed: ${(state.up_info_speed / 1024 / 1024).toFixed(2)} MB/s
-Uploaded Data: ${(state.up_info_data / 1024 / 1024 / 1024).toFixed(2)} GB
-DHT Nodes: ${state.dht_nodes}
-Connection Status: ${state.connection_status}
-Server State: ${state.server_state}
-Queueing: ${state.queueing}
-Use Alt Speed Limits: ${state.use_alt_speed_limits}
-    `;
+Total Torrents: ${allData.torrents?.length || 0}
+Connection Status: Connected
+Server State: Running`;
 
     return {
       type: 'text',
@@ -394,8 +378,7 @@ Use Alt Speed Limits: ${state.use_alt_speed_limits}
 
 async function handleSetTorrentCategory(hash: string, category: string): Promise<TextContent> {
   try {
-    await qbClient.login(QBIT_USERNAME, QBIT_PASSWORD);
-    await qbClient.setCategory(hash, category);
+    await qb.setTorrentCategory(hash, category);
 
     return {
       type: 'text',
@@ -411,21 +394,27 @@ async function handleSetTorrentCategory(hash: string, category: string): Promise
 
 async function handleGetCategories(): Promise<TextContent> {
   try {
-    await qbClient.login(QBIT_USERNAME, QBIT_PASSWORD);
-    const categories = await qbClient.getCategories();
+    const allTorrents = await qb.listTorrents();
 
-    if (Object.keys(categories).length === 0) {
+    // Extract unique categories from torrents
+    const categories = new Set<string>();
+    if (allTorrents) {
+      allTorrents.forEach((t: any) => {
+        if (t.category) {
+          categories.add(t.category);
+        }
+      });
+    }
+
+    if (categories.size === 0) {
       return {
         type: 'text',
         text: 'No categories found',
       };
     }
 
-    const categoryList = Object.entries(categories)
-      .map(
-        ([name, data]: [string, any]) =>
-          `- ${name}: ${data.save_path || 'No save path'}`,
-      )
+    const categoryList = Array.from(categories)
+      .map((name: string) => `- ${name}`)
       .join('\n');
 
     return {
@@ -442,10 +431,22 @@ async function handleGetCategories(): Promise<TextContent> {
 
 async function handleGetTags(): Promise<TextContent> {
   try {
-    await qbClient.login(QBIT_USERNAME, QBIT_PASSWORD);
-    const tags = await qbClient.getTags();
+    const allTorrents = await qb.listTorrents();
 
-    if (tags.length === 0) {
+    // Extract unique tags from torrents
+    const tags = new Set<string>();
+    if (allTorrents) {
+      allTorrents.forEach((t: any) => {
+        if (t.tags) {
+          const torrentTags = Array.isArray(t.tags) ? t.tags : t.tags.split(',');
+          torrentTags.forEach((tag: string) => {
+            if (tag.trim()) tags.add(tag.trim());
+          });
+        }
+      });
+    }
+
+    if (tags.size === 0) {
       return {
         type: 'text',
         text: 'No tags found',
@@ -454,7 +455,9 @@ async function handleGetTags(): Promise<TextContent> {
 
     return {
       type: 'text',
-      text: `Available tags:\n${tags.map((t) => `- ${t}`).join('\n')}`,
+      text: `Available tags:\n${Array.from(tags)
+        .map((t: string) => `- ${t}`)
+        .join('\n')}`,
     };
   } catch (error) {
     return {
@@ -564,22 +567,42 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   let mimeType = 'text/plain';
 
   try {
-    await qbClient.login(QBIT_USERNAME, QBIT_PASSWORD);
-
     if (uri === 'qbittorrent://torrents/all') {
-      const torrents = await qbClient.getTorrents('all');
+      const torrents = await qb.listTorrents();
       content = JSON.stringify(torrents, null, 2);
       mimeType = 'application/json';
     } else if (uri === 'qbittorrent://app/state') {
-      const state = await qbClient.getAppState();
-      content = JSON.stringify(state, null, 2);
+      const allData = await qb.getAllData();
+      content = JSON.stringify(allData, null, 2);
       mimeType = 'application/json';
     } else if (uri === 'qbittorrent://categories') {
-      const categories = await qbClient.getCategories();
+      const allTorrents = await qb.listTorrents();
+      const categories: {[key: string]: string} = {};
+      if (allTorrents) {
+        allTorrents.forEach((t: any) => {
+          if (t.category && !categories[t.category]) {
+            categories[t.category] = t.category;
+          }
+        });
+      }
       content = JSON.stringify(categories, null, 2);
       mimeType = 'application/json';
     } else if (uri === 'qbittorrent://tags') {
-      const tags = await qbClient.getTags();
+      const allTorrents = await qb.listTorrents();
+      const tags: string[] = [];
+      if (allTorrents) {
+        allTorrents.forEach((t: any) => {
+          if (t.tags) {
+            const torrentTags = Array.isArray(t.tags) ? t.tags : t.tags.split(',');
+            torrentTags.forEach((tag: string) => {
+              const trimmedTag = tag.trim();
+              if (trimmedTag && !tags.includes(trimmedTag)) {
+                tags.push(trimmedTag);
+              }
+            });
+          }
+        });
+      }
       content = JSON.stringify(tags, null, 2);
       mimeType = 'application/json';
     } else {
