@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "qbit-mcp": {
+      "command": "node",
+      "args": ["/path/to/qbit-mcp/dist/index.js"],
+      "env": {
+        "QBIT_URL": "http://localhost:8080",
+        "QBIT_USERNAME": "admin",
+        "QBIT_PASSWORD": "adminPassword"
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+# Development files
+src/
+tsconfig.json
+setup.sh
+.env.example
+claude-config-example.json
+USAGE.md
+
+# Test files
+__tests__/
+*.test.ts
+
+# Build artifacts
+*.tsbuildinfo
+
+# Development dependencies
+node_modules/
+
+# Git
+.git/
+.gitignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Other
+.env
+.env.*
