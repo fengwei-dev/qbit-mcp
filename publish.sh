@@ -56,10 +56,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   echo "✅ 发布成功！"
   echo ""
   echo "📚 查看包信息:"
-  echo "   npm view @nas-mcps/qbit-mcp"
+  echo "   npm view @nasmcps/qbit-mcp"
   echo ""
   echo "🌐 在线查看:"
-  echo "   https://www.npmjs.com/package/@nas-mcps/qbit-mcp"
+  echo "   https://www.npmjs.com/package/@nasmcps/qbit-mcp"
   echo ""
 else
   echo "❌ 取消发布"

@@ -50,17 +50,17 @@ npm publish --access=public
 # 方式 2：使用 OTP (如果启用了两因素认证)
 npm publish --access=public --otp=123456
 
-# 说明: 作用域包 (@nas-mcps/qbit-mcp) 发布时需要 --access=public
+# 说明: 作用域包 (@nasmcps/qbit-mcp) 发布时需要 --access=public
 ```
 
 ### 3. 验证发布成功
 
 ```bash
 # 检查 npm 包的最新版本
-npm view @nas-mcps/qbit-mcp
+npm view @nasmcps/qbit-mcp
 
 # 或者访问在线页面
-# https://www.npmjs.com/package/@nas-mcps/qbit-mcp
+# https://www.npmjs.com/package/@nasmcps/qbit-mcp
 ```
 
 ## 版本管理
@@ -171,13 +171,13 @@ npm deprecate qbit-mcp@0.1.0 "This version is deprecated"
 发布后，用户可以通过以下方式安装：
 
 ```bash
-npm install @nas-mcps/qbit-mcp
+npm install @nasmcps/qbit-mcp
 
 # 或使用全局安装
-npm install -g @nas-mcps/qbit-mcp
+npm install -g @nasmcps/qbit-mcp
 
 # 或在项目中使用
-npm install --save @nas-mcps/qbit-mcp
+npm install --save @nasmcps/qbit-mcp
 ```
 
 ## 更多资源
