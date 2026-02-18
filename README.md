@@ -70,8 +70,8 @@ npm run dev
 ```json
 {
   "name": "qbit-mcp",
-  "command": "node",
-  "args": ["/path/to/qbit-mcp/dist/index.js"],
+  "command": "npx",
+  "args": ["@nasmcps/qbit-mcp"],
   "env": {
     "QBIT_URL": "http://localhost:8080",
     "QBIT_USERNAME": "admin",
