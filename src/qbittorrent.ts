@@ -57,9 +57,14 @@ export class QBittorrentClient {
 
   async login(username: string = 'admin', password: string = 'adminPassword'): Promise<void> {
     try {
-      const response = await this.client.post('/api/v2/auth/login', {
-        username,
-        password,
+      const params = new URLSearchParams();
+      params.append('username', username);
+      params.append('password', password);
+
+      const response = await this.client.post('/api/v2/auth/login', params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
       });
 
       if (response.status === 200) {
@@ -138,9 +143,14 @@ export class QBittorrentClient {
     if (!this.authenticated) await this.login();
 
     try {
-      await this.client.post('/api/v2/torrents/delete', {
-        hashes: hash,
-        deleteFiles,
+      const params = new URLSearchParams();
+      params.append('hashes', hash);
+      params.append('deleteFiles', deleteFiles ? 'true' : 'false');
+
+      await this.client.post('/api/v2/torrents/delete', params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
       });
     } catch (error) {
       throw new Error(`Failed to remove torrent: ${error}`);
@@ -151,8 +161,13 @@ export class QBittorrentClient {
     if (!this.authenticated) await this.login();
 
     try {
-      await this.client.post('/api/v2/torrents/pause', {
-        hashes: hash,
+      const params = new URLSearchParams();
+      params.append('hashes', hash);
+
+      await this.client.post('/api/v2/torrents/pause', params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
       });
     } catch (error) {
       throw new Error(`Failed to pause torrent: ${error}`);
@@ -163,8 +178,13 @@ export class QBittorrentClient {
     if (!this.authenticated) await this.login();
 
     try {
-      await this.client.post('/api/v2/torrents/resume', {
-        hashes: hash,
+      const params = new URLSearchParams();
+      params.append('hashes', hash);
+
+      await this.client.post('/api/v2/torrents/resume', params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
       });
     } catch (error) {
       throw new Error(`Failed to resume torrent: ${error}`);
@@ -187,9 +207,14 @@ export class QBittorrentClient {
     if (!this.authenticated) await this.login();
 
     try {
-      await this.client.post('/api/v2/torrents/setCategory', {
-        hashes: hash,
-        category,
+      const params = new URLSearchParams();
+      params.append('hashes', hash);
+      params.append('category', category);
+
+      await this.client.post('/api/v2/torrents/setCategory', params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
       });
     } catch (error) {
       throw new Error(`Failed to set category: ${error}`);
@@ -200,9 +225,14 @@ export class QBittorrentClient {
     if (!this.authenticated) await this.login();
 
     try {
-      await this.client.post('/api/v2/torrents/addTags', {
-        hashes: hash,
-        tags: tags.join(','),
+      const params = new URLSearchParams();
+      params.append('hashes', hash);
+      params.append('tags', tags.join(','));
+
+      await this.client.post('/api/v2/torrents/addTags', params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
       });
     } catch (error) {
       throw new Error(`Failed to set tags: ${error}`);
