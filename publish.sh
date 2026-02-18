@@ -50,15 +50,16 @@ echo ""
 read -p "确认发布到 npm (y/n)? " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-  npm publish
+  # 作用域包需要 --access=public
+  npm publish --access=public
   echo ""
   echo "✅ 发布成功！"
   echo ""
   echo "📚 查看包信息:"
-  echo "   npm view qbit-mcp"
+  echo "   npm view @nas-mcps/qbit-mcp"
   echo ""
   echo "🌐 在线查看:"
-  echo "   https://www.npmjs.com/package/qbit-mcp"
+  echo "   https://www.npmjs.com/package/@nas-mcps/qbit-mcp"
   echo ""
 else
   echo "❌ 取消发布"

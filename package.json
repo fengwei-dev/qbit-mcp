@@ -1,5 +1,5 @@
 {
-  "name": "qbit-mcp",
+  "name": "@nas-mcps/qbit-mcp",
   "version": "0.1.0",
   "description": "A Model Context Protocol (MCP) server for controlling qBittorrent via Claude and other MCP clients",
   "type": "module",
